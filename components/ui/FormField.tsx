@@ -2,7 +2,8 @@ import React from 'react';
 
 interface FormFieldProps {
   label: string;
-  icon: JSX.Element;
+  // Fix: Changed icon type from JSX.Element to React.ReactNode to resolve namespace issue.
+  icon: React.ReactNode;
   children: React.ReactNode;
 }
 

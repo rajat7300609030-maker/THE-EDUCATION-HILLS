@@ -1,46 +1,52 @@
 import React, { useRef, useState } from 'react';
 import PageWrapper from '../ui/PageWrapper';
-import { Page } from '../../types';
+import { Page, UserProfile } from '../../types';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { exportToCsv, printReport, downloadBackup, restoreBackup, downloadPdfReport } from '../../utils/dataManager';
-// Fix: Corrected the import path for useNotification.
 import { useNotification } from '../../contexts/NavigationContext';
 import useUserProfile from '../../hooks/useUserProfile';
 import ConfirmationModal from '../ui/ConfirmationModal';
 import { PAGE_DATA } from '../../constants/pageData';
+import ProfilePhoto from '../ui/ProfilePhoto';
+import GoogleAccountChooserModal from '../ui/GoogleAccountChooserModal';
+import useUsers from '../../hooks/useUsers';
+import useSessions from '../../hooks/useSessions';
+import useSchoolProfile from '../../hooks/useSchoolProfile';
 
 const SettingsPage: React.FC = () => {
   const { navigate } = useNavigation();
   const { addNotification } = useNotification();
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const [userProfile, setUserProfile] = useUserProfile();
+  const [, setUsers] = useUsers();
 
-  // State for the clear data confirmation modal
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [userProfile] = useUserProfile();
+  
+  const [isDisconnectModalOpen, setIsDisconnectModalOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  
+  const [sessions, setSessions] = useSessions();
+  const [schoolProfile, setSchoolProfile] = useSchoolProfile();
+  const [newSession, setNewSession] = useState('');
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [sessionToChange, setSessionToChange] = useState<string | null>(null);
 
   const handleInitiateClearData = async () => {
-    // 1. Automatically trigger backup download first.
     await downloadBackup();
     addNotification('A data backup has been automatically downloaded for safety.', 'info');
-    
-    // 2. Open the confirmation modal.
     setPasswordInput('');
     setPasswordError('');
     setIsClearDataModalOpen(true);
   };
 
   const handleConfirmClearData = () => {
-    // For this demo, we'll check against the password from the user profile.
     const correctPassword = userProfile.password || 'password';
-
     if (passwordInput === correctPassword) {
-        const keysToRemove = ['students', 'classes', 'userProfile', 'schoolProfile', 'feeStructure', 'inquiries', 'notifications', 'theme'];
+        const keysToRemove = ['students', 'classes', 'userProfile', 'schoolProfile', 'feeStructure', 'inquiries', 'notifications', 'theme', 'isLoggedIn', 'sessionsList'];
         keysToRemove.forEach(key => localStorage.removeItem(key));
-
         indexedDB.deleteDatabase('LMS_DB');
-
         addNotification('All application data has been cleared.', 'danger');
         setIsClearDataModalOpen(false);
         setTimeout(() => window.location.reload(), 1000);
@@ -50,7 +56,6 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-
   const handleRestoreClick = () => {
     restoreInputRef.current?.click();
   };
@@ -58,7 +63,6 @@ const SettingsPage: React.FC = () => {
   const handleFileRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
       await restoreBackup(file);
       addNotification('Data restored successfully! The application will now reload.', 'success');
@@ -66,11 +70,81 @@ const SettingsPage: React.FC = () => {
     } catch (error) {
       addNotification(`Error restoring data: ${(error as Error).message}`, 'danger');
     } finally {
-      // Reset file input value to allow re-uploading the same file
-      if (restoreInputRef.current) {
-        restoreInputRef.current.value = '';
-      }
+      if (restoreInputRef.current) restoreInputRef.current.value = '';
     }
+  };
+
+  const handleDisconnect = () => {
+    const updatedUser = { ...userProfile, isGoogleAccount: false };
+    setUserProfile(updatedUser);
+    setUsers(prev => prev.map(u => u.userId === userProfile.userId ? updatedUser : u));
+    addNotification('Google Account has been disconnected.', 'info');
+    setIsDisconnectModalOpen(false);
+  };
+  
+  const handleLinkAccount = (googleUser: { name: string; email: string; }) => {
+      const updatedUser = { ...userProfile, email: googleUser.email, isGoogleAccount: true };
+      setUserProfile(updatedUser);
+      setUsers(prev => prev.map(u => u.userId === userProfile.userId ? updatedUser : u));
+      addNotification(`Google Account (${googleUser.email}) has been linked.`, 'success');
+      setIsLinkModalOpen(false);
+  };
+  
+  const handleSessionChangeRequest = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSessionValue = e.target.value;
+    if (newSessionValue !== schoolProfile.session) {
+      setSessionToChange(newSessionValue);
+    }
+  };
+
+  const confirmSessionChange = () => {
+    if (sessionToChange) {
+      setSchoolProfile(prev => ({ ...prev, session: sessionToChange }));
+      addNotification(`Session changed to ${sessionToChange}. The app will now reload.`, 'success');
+      setSessionToChange(null);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    }
+  };
+
+  const handleAddSession = () => {
+    const sessionRegex = /^\d{4}-\d{4}$/;
+    if (!newSession.trim() || !sessionRegex.test(newSession.trim())) {
+      addNotification('Please enter a valid session format (e.g., 2025-2026).', 'danger');
+      return;
+    }
+    if (sessions.includes(newSession.trim())) {
+      addNotification('This session already exists.', 'danger');
+      return;
+    }
+    setSessions(prev => [...prev, newSession.trim()].sort());
+    setNewSession('');
+    addNotification('New session added.', 'success');
+  };
+  
+  const handleDeleteSession = () => {
+    if (sessionToDelete) {
+        setSessions(prev => prev.filter(s => s !== sessionToDelete));
+        addNotification(`Session "${sessionToDelete}" deleted.`, 'info');
+        setSessionToDelete(null);
+    }
+  };
+
+  const handleDataSync = (dataType: 'Student' | 'Fee') => {
+    addNotification(`Syncing ${dataType.toLowerCase()} data to Google Sheets...`, 'info');
+
+    // Simulate API call and sheet generation
+    setTimeout(() => {
+        // In a real app, these URLs would be dynamically generated by a backend.
+        // For this demo, we'll use placeholder URLs that mimic a Google Sheet template.
+        const mockSheetUrl = dataType === 'Student' 
+            ? 'https://docs.google.com/spreadsheets/d/1B_6a-E1vL-r4v_m_o_p_q_r_s_t_u_v_w_x/template/preview'
+            : 'https://docs.google.com/spreadsheets/d/1C_8d-F2wM-s5x_y_z_a_b_c_d_e_f_g/template/preview';
+        
+        window.open(mockSheetUrl, '_blank', 'noopener,noreferrer');
+        addNotification(`${dataType} data synced. Opening Google Sheet.`, 'success');
+    }, 1500); // 1.5 second delay for realism
   };
 
   return (
@@ -93,6 +167,96 @@ const SettingsPage: React.FC = () => {
              <SettingsButton icon={PAGE_DATA[Page.UserManagement].icon} label="User Management" onClick={() => navigate(Page.UserManagement)} />
              <SettingsButton icon={PAGE_DATA[Page.FeeStructure].icon} label="Fee Structure" onClick={() => navigate(Page.FeeStructure)} />
              <SettingsButton icon={PAGE_DATA[Page.Integrations].icon} label="Integrations" onClick={() => navigate(Page.Integrations)} />
+          </div>
+        </div>
+        
+        <div className="neo-container rounded-xl p-6">
+            <h3 className="text-xl font-bold border-b pb-3 mb-4">Session Management</h3>
+            <div className="space-y-4">
+                <div>
+                    <label htmlFor="active-session" className="font-semibold block mb-2">Set Active Session</label>
+                    <select id="active-session" value={schoolProfile.session} onChange={handleSessionChangeRequest} className="neo-button w-full p-3 rounded-lg">
+                        {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="new-session" className="font-semibold block mb-2">Add New Session</label>
+                    <div className="flex space-x-2">
+                        <input
+                            id="new-session"
+                            type="text"
+                            value={newSession}
+                            onChange={e => setNewSession(e.target.value)}
+                            placeholder="e.g., 2027-2028"
+                            className="neo-button flex-grow p-3 rounded-lg"
+                        />
+                        <button onClick={handleAddSession} className="neo-button-primary rounded-lg px-4 font-semibold">Add</button>
+                    </div>
+                </div>
+                <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-2">Existing Sessions</h4>
+                    <div className="space-y-2">
+                        {sessions.map(s => (
+                            <div key={s} className="flex items-center justify-between neo-button p-2 rounded-md">
+                                <span>{s}</span>
+                                <button
+                                    onClick={() => setSessionToDelete(s)}
+                                    disabled={s === schoolProfile.session}
+                                    className="neo-button bg-red-500 text-white rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div className="neo-container rounded-xl p-6">
+            <h3 className="text-xl font-bold border-b border-gray-300 dark:border-gray-700 pb-3 mb-4">Google Account</h3>
+            {userProfile.isGoogleAccount ? (
+                <div>
+                    <div className="flex items-center space-x-4">
+                        <ProfilePhoto userId={userProfile.userId} hasPhoto={userProfile.hasPhoto} alt={userProfile.name} className="neo-container w-16 h-16 rounded-full object-cover"/>
+                        <div>
+                            <p className="font-bold text-lg">{userProfile.name}</p>
+                            <p className="text-sm text-gray-600">{userProfile.email}</p>
+                            <span className="text-xs font-semibold bg-green-100 text-green-800 px-2 py-0.5 rounded-full inline-block mt-1">Connected</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-end mt-4 border-t pt-4">
+                        <button onClick={() => setIsDisconnectModalOpen(true)} className="neo-button-danger rounded-xl px-4 py-2 text-sm font-semibold">
+                            Disconnect
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div>
+                    <p className="text-sm text-gray-600 mb-4">Link your Google Account to sync data and for easier sign-in.</p>
+                    <div className="flex justify-end">
+                        <button onClick={() => setIsLinkModalOpen(true)} className="neo-button-primary rounded-xl px-4 py-2 text-sm font-semibold flex items-center space-x-2">
+                            <svg className="w-5 h-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C41.38,36.425,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+                            <span>Link Google Account</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+
+        <div className="neo-container rounded-xl p-6">
+          <h3 className="text-xl font-bold border-b border-gray-300 dark:border-gray-700 pb-3 mb-4">Google Sheet Options</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <DataButton 
+              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 2v-2m-6 4H7a2 2 0 01-2-2V7a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2m-4 0h4m-4 0H9" /></svg>} 
+              label="Sync Student Data" 
+              onClick={() => handleDataSync('Student')} 
+            />
+            <DataButton
+              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 2v-2m-6 4H7a2 2 0 01-2-2V7a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2m-4 0h4m-4 0H9" /></svg>}
+              label="Sync Fee Records"
+              onClick={() => handleDataSync('Fee')}
+            />
           </div>
         </div>
 
@@ -146,18 +310,53 @@ const SettingsPage: React.FC = () => {
           {passwordError && <p className="text-red-500 text-sm mt-2">{passwordError}</p>}
         </div>
       </ConfirmationModal>
+
+      <ConfirmationModal
+        isOpen={isDisconnectModalOpen}
+        onClose={() => setIsDisconnectModalOpen(false)}
+        onConfirm={handleDisconnect}
+        title="Disconnect Google Account"
+        message={<>Are you sure you want to disconnect your Google account? You will need to use your User ID and password to sign in.</>}
+        confirmText="Disconnect"
+        variant="danger"
+      />
+      <GoogleAccountChooserModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        onAccountSelect={handleLinkAccount}
+        currentUserEmail={userProfile.email}
+        currentUserName={userProfile.name}
+      />
+      <ConfirmationModal
+        isOpen={!!sessionToDelete}
+        onClose={() => setSessionToDelete(null)}
+        onConfirm={handleDeleteSession}
+        title="Delete Session"
+        message={<>Are you sure you want to delete the session <strong>"{sessionToDelete}"</strong>? This action cannot be undone.</>}
+        confirmText="Delete"
+        variant="danger"
+      />
+       <ConfirmationModal
+        isOpen={!!sessionToChange}
+        onClose={() => setSessionToChange(null)}
+        onConfirm={confirmSessionChange}
+        title="Change Active Session"
+        message={<>Are you sure you want to change the active session to <strong>{sessionToChange}</strong>?<br/><br/><span className="font-semibold text-orange-600">This action will reload the application.</span></>}
+        confirmText="Confirm & Reload"
+        variant="success"
+      />
     </PageWrapper>
   );
 };
 
-const SettingsButton: React.FC<{ icon: JSX.Element; label: string; onClick: () => void; }> = ({ icon, label, onClick }) => (
+const SettingsButton: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; }> = ({ icon, label, onClick }) => (
   <button onClick={onClick} className="neo-button w-full flex items-center p-4 rounded-xl text-sm font-semibold hover:scale-105 transition-transform duration-200">
     <div className="neo-container rounded-full p-2 mr-4">{icon}</div>
     {label}
   </button>
 );
 
-const DataButton: React.FC<{ icon: JSX.Element; label: string; onClick: () => void; }> = ({ icon, label, onClick }) => (
+const DataButton: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; }> = ({ icon, label, onClick }) => (
   <button onClick={onClick} className="neo-button w-full flex flex-col items-center p-4 rounded-xl text-sm font-semibold hover:scale-105 transition-transform duration-200 text-center">
     <div className="neo-container rounded-full p-2 mb-2">{icon}</div>
     {label}

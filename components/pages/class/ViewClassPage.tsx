@@ -6,7 +6,8 @@ import { useNavigation } from '../../../contexts/NavigationContext';
 import { getInitialClasses, getInitialStudents } from '../../../utils/seedData';
 import StudentPhoto from '../../ui/StudentPhoto';
 
-const StatCard: React.FC<{ label: string; value: string | number; icon: JSX.Element }> = ({ label, value, icon }) => (
+// Fix: Changed icon type from JSX.Element to React.ReactNode to resolve namespace issue.
+const StatCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode }> = ({ label, value, icon }) => (
     <div className="neo-container rounded-xl p-4 flex items-center space-x-4">
         <div className="neo-container rounded-full p-3">
             {icon}

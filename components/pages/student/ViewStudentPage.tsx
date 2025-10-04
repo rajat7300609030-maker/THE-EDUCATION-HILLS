@@ -144,7 +144,8 @@ const StudentProfilePage: React.FC = () => {
     );
 };
 
-const ActionButton: React.FC<{ icon: JSX.Element; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
+// Fix: Changed icon type from JSX.Element to React.ReactNode to resolve namespace issue.
+const ActionButton: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
     <button onClick={onClick} className="neo-button p-3 rounded-lg flex flex-col items-center justify-center text-center text-xs font-semibold space-y-1 hover:text-blue-600 transition-colors">
         {icon}
         <span>{label}</span>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import PageWrapper from '../../ui/PageWrapper';
 import { Page, UserProfile } from '../../../types';

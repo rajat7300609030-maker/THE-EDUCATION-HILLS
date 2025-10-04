@@ -1,5 +1,8 @@
 import { Student, Class } from '../types';
 
+declare const html2canvas: any;
+declare const jspdf: any;
+
 // --- CSV EXPORT ---
 function convertToCSV(data: any[]): string {
     if (data.length === 0) return '';
@@ -134,6 +137,63 @@ export const printReport = () => {
 };
 
 export const downloadPdfReport = () => {
-    alert("This feature uses the browser's print functionality. Choose 'Save as PDF' in the print dialog to create a PDF file.");
-    window.print();
+    const mainContent = document.querySelector('main');
+    if (!mainContent) {
+        alert("Could not find main content to generate PDF.");
+        return;
+    }
+    
+    const loadingMessage = document.createElement('div');
+    loadingMessage.innerText = 'Generating PDF, please wait...';
+    loadingMessage.style.position = 'fixed';
+    loadingMessage.style.top = '50%';
+    loadingMessage.style.left = '50%';
+    loadingMessage.style.transform = 'translate(-50%, -50%)';
+    loadingMessage.style.padding = '20px';
+    loadingMessage.style.color = 'black';
+    loadingMessage.style.backgroundColor = 'white';
+    loadingMessage.style.border = '1px solid black';
+    loadingMessage.style.borderRadius = '1rem';
+    loadingMessage.style.zIndex = '9999';
+    document.body.appendChild(loadingMessage);
+
+    html2canvas(mainContent, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollY: -window.scrollY,
+        windowHeight: mainContent.scrollHeight,
+    }).then((canvas: HTMLCanvasElement) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jspdf.jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const imgProps= pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        let heightLeft = pdfHeight;
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+
+        while (heightLeft >= 0) {
+          position = heightLeft - pdfHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pdf.internal.pageSize.getHeight();
+        }
+
+        pdf.save(`report_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        document.body.removeChild(loadingMessage);
+    }).catch((err: any) => {
+        console.error("PDF generation failed", err);
+        alert("Failed to generate PDF.");
+        document.body.removeChild(loadingMessage);
+    });
 };

@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+
+import { useMemo, Dispatch, SetStateAction } from 'react';
 import useLocalStorage from './useLocalStorage';
 import { SchoolProfile } from '../types';
 
@@ -21,7 +22,8 @@ const defaultProfile: SchoolProfile = {
   sliderTransitionEffect: 'fade',
 };
 
-function useSchoolProfile(): [SchoolProfile, React.Dispatch<React.SetStateAction<SchoolProfile>>] {
+// Fix: Imported Dispatch and SetStateAction and used them to type the return value.
+function useSchoolProfile(): [SchoolProfile, Dispatch<SetStateAction<SchoolProfile>>] {
   const [profile, setProfile] = useLocalStorage<SchoolProfile>('schoolProfile', defaultProfile);
 
   // Ensure that the loaded profile has all the default keys, in case the stored object is partial

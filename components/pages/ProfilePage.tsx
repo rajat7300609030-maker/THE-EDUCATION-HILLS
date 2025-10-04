@@ -279,7 +279,8 @@ const InputField: React.FC<{
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isEditing: boolean;
   type?: string;
-  icon: JSX.Element;
+  // Fix: Changed icon type from JSX.Element to React.ReactNode to resolve namespace issue.
+  icon: React.ReactNode;
 }> = ({ label, name, value, onChange, isEditing, type = 'text', icon }) => (
   <div>
     <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">{icon}<span>{label}</span></label>
@@ -297,7 +298,8 @@ const NotificationToggle: React.FC<{
   settingKey: keyof UserProfile['notificationSettings'];
   checked: boolean;
   onChange: (key: any, value: boolean) => void;
-  icon: JSX.Element;
+  // Fix: Changed icon type from JSX.Element to React.ReactNode to resolve namespace issue.
+  icon: React.ReactNode;
 }> = ({ label, settingKey, checked, onChange, icon }) => (
     <div className="flex items-center justify-between p-2 rounded-lg">
         <label htmlFor={`${settingKey}-toggle`} className="text-sm font-medium text-gray-700 flex items-center space-x-3">

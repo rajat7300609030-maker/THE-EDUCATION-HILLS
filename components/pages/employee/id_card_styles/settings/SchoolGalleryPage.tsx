@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import PageWrapper from '../../ui/PageWrapper';
 import { Page } from '../../../types';
@@ -63,7 +64,8 @@ const SchoolGalleryPage: React.FC = () => {
             const imageBlobs = await getAllGalleryImages();
             const newImages = imageBlobs.map((blob, index) => ({
                 key: imageKeys[index],
-                url: URL.createObjectURL(blob),
+                // Fix: Cast blob to Blob type, as it's inferred as 'unknown' from IndexedDB.
+                url: URL.createObjectURL(blob as Blob),
             }));
             
             setImages(currentImages => {

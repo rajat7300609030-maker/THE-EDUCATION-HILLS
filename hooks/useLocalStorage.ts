@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
 
-function useLocalStorage<T>(key: string, initialValue: T | (() => T)): [T, React.Dispatch<React.SetStateAction<T>>] {
+import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
+
+// Fix: Imported Dispatch and SetStateAction and used them to type the return value.
+function useLocalStorage<T>(key: string, initialValue: T | (() => T)): [T, Dispatch<SetStateAction<T>>] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -17,7 +19,8 @@ function useLocalStorage<T>(key: string, initialValue: T | (() => T)): [T, React
     }
   });
 
-  const setValue = useCallback<React.Dispatch<React.SetStateAction<T>>>(
+  // Fix: Used Dispatch and SetStateAction for typing.
+  const setValue = useCallback<Dispatch<SetStateAction<T>>>(
     (value) => {
       setStoredValue((currentValue) => {
         try {

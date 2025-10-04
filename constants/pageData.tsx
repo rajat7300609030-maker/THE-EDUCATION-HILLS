@@ -1,7 +1,8 @@
 import React from 'react';
 import { Page } from '../types';
 
-export const PAGE_DATA: Record<Page, { title: string; description: string; icon: JSX.Element }> = {
+// Fix: Changed icon type from JSX.Element to React.ReactNode to resolve namespace issue.
+export const PAGE_DATA: Record<Page, { title: string; description: string; icon: React.ReactNode }> = {
     [Page.Dashboard]: {
         title: 'Welcome',
         description: 'A quick overview of your dashboard and recent activities.',

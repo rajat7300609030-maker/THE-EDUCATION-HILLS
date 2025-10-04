@@ -11,6 +11,7 @@ export const getInitialUsers = (): UserProfile[] => [
         password: 'password',
         dob: '1980-01-01',
         address: '123 Admin Lane',
+        isGoogleAccount: false,
         notificationSettings: {
             email: true,
             sms: true,
@@ -31,6 +32,7 @@ export const getInitialUsers = (): UserProfile[] => [
         password: 'password',
         dob: '1990-05-10',
         address: '456 Teacher Ave',
+        isGoogleAccount: false,
         notificationSettings: {
             email: true,
             sms: false,
@@ -52,6 +54,7 @@ export const getInitialUsers = (): UserProfile[] => [
         password: 'password',
         dob: '2009-05-15', // From seedData
         address: '789 Student St',
+        isGoogleAccount: false,
         notificationSettings: {
             email: false,
             sms: true,

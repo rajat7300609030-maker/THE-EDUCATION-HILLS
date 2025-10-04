@@ -141,6 +141,7 @@ export interface UserProfile {
   address: string;
   password?: string;
   isDeleted?: boolean;
+  isGoogleAccount?: boolean;
   notificationSettings: {
     email: boolean;
     sms: boolean;

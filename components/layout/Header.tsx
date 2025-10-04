@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { PAGE_DATA } from '../../constants/pageData';
@@ -61,9 +64,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout, setIsBlurred, is
   };
 
   const profileIconRaw = PAGE_DATA[Page.Profile].icon;
-  const profileIcon = React.cloneElement(profileIconRaw, {
-    className: profileIconRaw.props.className.replace('h-6 w-6', 'h-5 w-5')
-  });
+  // Fix: Correctly cast the icon to a ReactElement with a className prop to allow cloning with a modified className. This resolves TypeScript errors about unknown properties.
+  const profileIcon = React.isValidElement(profileIconRaw)
+    ? (() => {
+        const element = profileIconRaw as React.ReactElement<{ className?: string }>;
+        return React.cloneElement(element, {
+            className: element.props.className?.replace('h-6 w-6', 'h-5 w-5')
+        });
+    })()
+    : profileIconRaw;
 
   const logoutIcon = (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -107,9 +116,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout, setIsBlurred, is
                     <div className="neo-container absolute top-14 right-0 w-56 rounded-lg p-2 space-y-2 z-50">
                       {sidebarLinksForUser.map(({ page, label }) => {
                         const icon = PAGE_DATA[page].icon;
-                        const smallIcon = React.cloneElement(icon, {
-                            className: icon.props.className.replace('h-6 w-6', 'h-5 w-5')
-                        });
+                        // Fix: Correctly cast the icon to a ReactElement with a className prop to allow cloning with a modified className. This resolves TypeScript errors about unknown properties.
+                        const smallIcon = React.isValidElement(icon)
+                          ? (() => {
+                                const element = icon as React.ReactElement<{ className?: string }>;
+                                return React.cloneElement(element, {
+                                    className: element.props.className?.replace('h-6 w-6', 'h-5 w-5')
+                                });
+                            })()
+                          : icon;
 
                         return (
                           <button

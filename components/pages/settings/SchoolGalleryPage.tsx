@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import PageWrapper from '../../ui/PageWrapper';
 import { Page, SchoolProfile } from '../../../types';
@@ -25,9 +26,10 @@ const SchoolGalleryPage: React.FC = () => {
         try {
             const imageKeys = await getAllGalleryImageKeys();
             const imageBlobs = await getAllGalleryImages();
+            // Fix: Cast `blob` to Blob as it's inferred as 'unknown' from IndexedDB, causing a type error with URL.createObjectURL.
             const newImages = imageBlobs.map((blob, index) => ({
                 key: imageKeys[index],
-                url: URL.createObjectURL(blob),
+                url: URL.createObjectURL(blob as Blob),
             }));
             
             setImages(currentImages => {

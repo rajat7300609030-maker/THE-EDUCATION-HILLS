@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+
+
+import { useMemo, Dispatch, SetStateAction } from 'react';
 import useLocalStorage from './useLocalStorage';
 import { UserProfile } from '../types';
 
@@ -12,6 +14,7 @@ const defaultUser: UserProfile = {
   dob: '',
   address: '',
   password: 'password',
+  isGoogleAccount: false,
   notificationSettings: {
     email: true,
     sms: false,
@@ -23,7 +26,8 @@ const defaultUser: UserProfile = {
   },
 };
 
-function useUserProfile(): [UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>] {
+// Fix: Imported Dispatch and SetStateAction and used them to type the return value.
+function useUserProfile(): [UserProfile, Dispatch<SetStateAction<UserProfile>>] {
   const [rawProfile, setRawProfile] = useLocalStorage<UserProfile>('userProfile', defaultUser);
 
   // The merging logic is now more robust. It explicitly checks for a valid
